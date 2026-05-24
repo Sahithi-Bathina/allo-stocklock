@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Allo StockLock
 
-## Getting Started
+> Atomic multi-warehouse inventory reservation platform built to prevent overselling and race conditions during concurrent checkout attempts.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Live Demo
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+🔗 https://allo-stocklock.vercel.app/
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## GitHub Repository
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+🔗 https://github.com/Sahithi-Bathina/allo-stocklock
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+# Problem Statement
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Traditional inventory systems often fail during simultaneous checkout attempts, allowing multiple users to reserve the same inventory at the same time.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+This project solves that problem using:
 
-## Deploy on Vercel
+- Atomic inventory reservation workflows
+- Transaction-safe stock updates
+- Warehouse-level inventory management
+- Reservation expiration recovery
+- Concurrent booking protection
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The system ensures inventory consistency even when multiple users attempt to reserve limited stock simultaneously.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+# Features
+
+## Atomic Reservation Locking
+Prevents overselling using transactional reservation logic.
+
+## Multi-Warehouse Inventory
+Each product can exist across multiple warehouse locations with independent stock tracking.
+
+## Concurrent Booking Protection
+Only one user can reserve the same inventory unit at a time.
+
+## Reservation Expiration System
+Expired reservations automatically release inventory back into stock.
+
+## Real-Time Inventory Updates
+Inventory quantities update immediately after reservation confirmation or release.
+
+## Reservation Lifecycle Management
+Supports:
+- Reserve inventory
+- Confirm purchase
+- Release reservation
+- Auto-expire reservation
+
+## Professional Dashboard UI
+Responsive dark-mode dashboard built with modern frontend tooling.
+
+---
+
+# Concurrency Protection
+
+The core objective of this system is preventing race conditions during simultaneous checkout attempts.
+
+## Tested Scenarios
+
+- Two users reserving same inventory simultaneously
+- Inventory exhaustion handling
+- Reservation expiration recovery
+- Multi-browser concurrent booking tests
+- Warehouse-specific inventory conflicts
+
+## Expected System Behavior
+
+- Only one successful reservation per available inventory unit
+- Failed concurrent attempts return conflict errors
+- Inventory consistency maintained across sessions
+- Zero-stock products cannot be reserved
+
+---
+
+# System Architecture
+
+## Reservation Flow
+
+```text
+User Action
+   ↓
+Next.js API Route
+   ↓
+Reservation Service
+   ↓
+Prisma Transaction
+   ↓
+PostgreSQL Inventory Lock
+   ↓
+Atomic Inventory Update
+   ↓
+Reservation Created
