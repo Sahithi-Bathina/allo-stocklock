@@ -1,33 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ReservationService } from '@/services/reservationService';
-import { z } from 'zod';
-
-const reserveSchema = z.object({
-  productId: z.string(),
-  warehouseId: z.string(),
-  quantity: z.number().int().positive(),
-});
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const validation = reserveSchema.safeParse(body);
+    const { productId, warehouseId, quantity } = body;
 
-    if (!validation.success) {
-      return NextResponse.json({ error: 'Invalid input fields', details: validation.error.format() }, { status: 400 });
+    // Quick validation check
+    if (!productId || !warehouseId || !quantity || quantity <= 0) {
+      return NextResponse.json(
+        { error: 'Missing required allocation parameters: productId, warehouseId, and positive quantity.' },
+        { status: 400 }
+      );
     }
 
-    const { productId, warehouseId, quantity } = validation.data;
-    
+    // Call your concurrency-safe row-locking service
     const result = await ReservationService.reserveProduct(productId, warehouseId, quantity);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.message }, { status: result.status });
+      // Passes back the 409 status cleanly to trigger frontend out-of-stock modals
+      return NextResponse.json({ message: result.message }, { status: result.status });
     }
 
-    return NextResponse.json(result.reservation, { status: 201 });
+    // Return the created reservation ticket with a 201 status
+    return NextResponse.json(
+      { 
+        message: 'Stock locked successfully for 10 minutes.', 
+        reservation: result.reservation 
+      }, 
+      { status: 201 }
+    );
+
   } catch (error) {
-    console.error('Error in reserve API route:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('Reservation API Route Failure:', error);
+    return NextResponse.json(
+      { error: 'Internal transactional system failure.' }, 
+      { status: 500 }
+    );
   }
 }

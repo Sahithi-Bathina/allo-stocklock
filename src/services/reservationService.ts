@@ -1,6 +1,13 @@
 import { db } from '@/lib/db';
 import { ReservationStatus } from '@prisma/client';
 
+// 1. Declare the type at the top so it's universally accessible in this file
+interface InventoryRow {
+  id: string;
+  totalUnits: number;
+  reservedUnits: number;
+}
+
 export class ReservationService {
   /**
    * Concurrency-safe unit reservation using PostgreSQL Row-Level Locking (FOR UPDATE)
@@ -9,7 +16,7 @@ export class ReservationService {
     return await db.$transaction(async (tx) => {
       // 1. Lock the inventory row for this specific product and warehouse combination.
       // This forces concurrent requests for the exact same SKU to queue up sequentially.
-      const inventoryRows = await tx.$queryRaw<any[]>`
+      const inventoryRows = await tx.$queryRaw<InventoryRow[]>`
         SELECT id, "totalUnits", "reservedUnits"
         FROM "Inventory"
         WHERE "productId" = ${productId} AND "warehouseId" = ${warehouseId}
@@ -158,5 +165,63 @@ export class ReservationService {
 
       return { success: true, status: 200, reservation: updatedReservation };
     });
+  }
+
+  /**
+   * Background cleanup worker: Finds and releases all uncompleted, expired reservations.
+   * This should be triggered periodically by a cron job or background endpoint.
+   */
+  static async cleanupExpiredReservations() {
+    try {
+      const now = new Date();
+
+      // 1. Find all pending reservations that have passed their expiration timestamp
+      const expiredReservations = await db.reservation.findMany({
+        where: {
+          status: ReservationStatus.PENDING,
+          expiresAt: { lt: now },
+        },
+      });
+
+      if (expiredReservations.length === 0) {
+        return { success: true, processedCount: 0 };
+      }
+
+      console.log(`[Cron Worker] Found ${expiredReservations.length} expired locks to release.`);
+
+      // 2. Process each expired item inside a transaction block to safely restore stock
+      for (const reservation of expiredReservations) {
+        await db.$transaction(async (tx) => {
+          // Double-check status inside the transaction block to avoid race conditions
+          const currentRes = await tx.reservation.findUnique({
+            where: { id: reservation.id },
+          });
+
+          if (currentRes && currentRes.status === ReservationStatus.PENDING) {
+            // Revert the reservedUnits back to the warehouse available pool
+            await tx.inventory.updateMany({
+              where: {
+                productId: reservation.productId,
+                warehouseId: reservation.warehouseId,
+              },
+              data: {
+                reservedUnits: { decrement: reservation.quantity },
+              },
+            });
+
+            // Set final terminal state to EXPIRED
+            await tx.reservation.update({
+              where: { id: reservation.id },
+              data: { status: ReservationStatus.EXPIRED },
+            });
+          }
+        });
+      }
+
+      return { success: true, processedCount: expiredReservations.length };
+    } catch (error) {
+      console.error('[Cron Worker Failure] Failed to clear expired reservations:', error);
+      return { success: false, error };
+    }
   }
 }

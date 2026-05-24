@@ -17,8 +17,11 @@ enum ReservationStatus {
 
 model Product {
   id           String        @id @default(cuid())
+
+  sku          String        @unique
   name         String
   description  String?
+  price        Float
   createdAt    DateTime      @default(now())
 
   inventories  Inventory[]

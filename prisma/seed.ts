@@ -4,48 +4,83 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Cleaning up existing data...');
+
   await prisma.reservation.deleteMany();
   await prisma.inventory.deleteMany();
   await prisma.product.deleteMany();
   await prisma.warehouse.deleteMany();
 
   console.log('Seeding warehouses...');
+
   const whMumbai = await prisma.warehouse.create({
-    data: { name: 'Mumbai Hub', location: 'Maharashtra' },
+    data: {
+      name: 'Mumbai Hub',
+      location: 'Maharashtra',
+    },
   });
+
   const whBangalore = await prisma.warehouse.create({
-    data: { name: 'Bangalore Fulfillment Center', location: 'Karnataka' },
+    data: {
+      name: 'Bangalore Fulfillment Center',
+      location: 'Karnataka',
+    },
   });
 
   console.log('Seeding products...');
+
   const productA = await prisma.product.create({
     data: {
+      sku: 'AWS-1001',
       name: 'Allo Smart Watch Series 1',
-      description: 'High performance fitness and productivity tracker.',
+      description:
+        'High performance fitness and productivity tracker.',
+      price: 249.99,
     },
   });
 
   const productB = await prisma.product.create({
     data: {
+      sku: 'AEP-2001',
       name: 'Allo Wireless Earbuds Pro',
-      description: 'Active noise-cancelling premium audio setup.',
+      description:
+        'Active noise-cancelling premium audio setup.',
+      price: 149.99,
     },
   });
 
   console.log('Seeding inventory stock allocations...');
-  // Mumbai Inventory
+
   await prisma.inventory.createMany({
     data: [
-      { productId: productA.id, warehouseId: whMumbai.id, totalUnits: 10, reservedUnits: 0 },
-      { productId: productB.id, warehouseId: whMumbai.id, totalUnits: 5, reservedUnits: 0 },
+      {
+        productId: productA.id,
+        warehouseId: whMumbai.id,
+        totalUnits: 10,
+        reservedUnits: 0,
+      },
+      {
+        productId: productB.id,
+        warehouseId: whMumbai.id,
+        totalUnits: 5,
+        reservedUnits: 0,
+      },
     ],
   });
 
-  // Bangalore Inventory
   await prisma.inventory.createMany({
     data: [
-      { productId: productA.id, warehouseId: whBangalore.id, totalUnits: 3, reservedUnits: 0 },
-      { productId: productB.id, warehouseId: whBangalore.id, totalUnits: 15, reservedUnits: 0 },
+      {
+        productId: productA.id,
+        warehouseId: whBangalore.id,
+        totalUnits: 3,
+        reservedUnits: 0,
+      },
+      {
+        productId: productB.id,
+        warehouseId: whBangalore.id,
+        totalUnits: 15,
+        reservedUnits: 0,
+      },
     ],
   });
 
